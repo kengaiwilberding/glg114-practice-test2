@@ -1,0 +1,484 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GLG 114 Practice Midterm — MSU</title>
+<style>
+  :root{
+    --bg:#0b1220; --panel:#0f172a; --text:#e6eefc; --muted:#9fb0cc;
+    --accent:#7cc4ff; --accent2:#b3ffcc; --danger:#ff8a8a; --ok:#7bffa8; --warn:#ffd27a;
+    --border:#1e2c4b;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(1200px 800px at 80% -10%, #1b2c4a 0, #0b1220 60%);color:var(--text);
+       font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,Helvetica,Arial;
+       min-height:100vh;display:grid;grid-template-rows:auto 1fr auto}
+  header{position:sticky;top:0;z-index:5;background:linear-gradient(180deg,#121a2b,#0e1728);border-bottom:1px solid #1f2a44;
+         padding:14px 18px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+  h1{margin:0;font-size:18px;letter-spacing:.5px}
+  .controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  select,button{background:#0d162b;color:var(--text);border:1px solid #263a63;border-radius:10px;padding:10px 12px;font-size:14px}
+  button{cursor:pointer;background:linear-gradient(180deg,#17345a,#112645);border-color:#2a4e86;transition:filter .15s ease, transform .04s}
+  button:hover{filter:brightness(1.08)} button:active{transform:translateY(1px)}
+  .pill{border-radius:999px;padding:9px 14px}
+  .accent{border-color:#3c78c9}
+  main{padding:18px;display:grid;place-items:center}
+  .wrap{width:min(1000px,96vw)}
+  .info{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:12px;color:var(--muted);font-size:14px}
+  .badge{border:1px solid #2a3b63;border-radius:999px;padding:6px 10px;background:#0b1220}
+  .timer{color:var(--warn);font-weight:600}
+  .progress-wrap{margin:8px 0}
+  progress{width:100%;height:10px;appearance:none}
+  progress::-webkit-progress-bar{background:#0c1323;border-radius:6px}
+  progress::-webkit-progress-value{background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:6px}
+  .question-card{background:linear-gradient(180deg,#0f192f,#0c1426);border:1px solid var(--border);border-radius:18px;
+                 box-shadow:0 10px 30px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.03);
+                 padding:18px;margin:10px 0}
+  .qtext{font-size:18px;line-height:1.45}
+  .choices{display:grid;gap:10px;margin-top:12px}
+  .choice{display:flex;gap:10px;align-items:flex-start;border:1px solid #23365e;border-radius:12px;padding:10px 12px;background:#0e1526;cursor:pointer}
+  .choice input{margin-top:3px}
+  .choice.correct{border-color:#2f7a5b;background:rgba(43,163,110,.15)}
+  .choice.incorrect{border-color:#883a3a;background:rgba(163,43,61,.12)}
+  .explain{margin-top:10px;color:var(--muted);border-top:1px dashed #2a3b63;padding-top:8px;display:none}
+  .nav{display:flex;justify-content:space-between;gap:10px;margin-top:12px}
+  .score{font-size:16px;margin:8px 0}
+  .hidden{display:none !important}
+  details{background:#0e1526;border:1px solid #263a63;border-radius:12px;padding:10px 12px}
+  summary{cursor:pointer}
+</style>
+</head>
+<body>
+<header>
+  <h1>GLG 114 Practice Midterm — Chapters 2–5</h1>
+  <div class="controls">
+    <select id="chapterSelect" title="Focus by chapter">
+      <option value="all">All Chapters (2–5)</option>
+      <option value="2">Chapter 2 — Rocks & Minerals</option>
+      <option value="3">Chapter 3 — Plate Tectonics</option>
+      <option value="4">Chapter 4 — Earthquakes</option>
+      <option value="5">Chapter 5 — Volcanoes</option>
+    </select>
+    <select id="numQuestions">
+      <option value="50">50 questions (midterm-style)</option>
+      <option value="30">30 questions</option>
+      <option value="20">20 questions</option>
+      <option value="10">10 questions</option>
+    </select>
+    <select id="timerSelect">
+      <option value="75">Timer: 75 min</option>
+      <option value="45">Timer: 45 min</option>
+      <option value="0">No timer</option>
+    </select>
+    <button id="startBtn" class="pill accent">Start Test</button>
+    <button id="resetBtn" class="pill">Reset</button>
+    <button id="reviewBtn" class="pill">Review Answers</button>
+    <button id="exportBtn" class="pill">Export Results</button>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <div class="info">
+      <span class="badge" id="status">Not started</span>
+      <span class="badge">Multiple Choice</span>
+      <span class="badge timer hidden" id="timerBadge">75:00</span>
+    </div>
+    <div class="progress-wrap hidden" id="progressWrap"><progress id="progress" value="0" max="100"></progress></div>
+
+    <div id="questions"></div>
+
+    <div class="nav hidden" id="navControls">
+      <button id="submitBtn" class="pill">Submit</button>
+      <button id="showAllBtn" class="pill">Show Correct Answers</button>
+    </div>
+
+    <div id="result" class="score"></div>
+
+    <details class="hidden" id="reviewPanel">
+      <summary>Missed Questions & Explanations</summary>
+      <div id="missed"></div>
+    </details>
+  </div>
+</main>
+
+<footer class="score" style="text-align:center; padding:10px 16px; color:var(--muted); border-top:1px solid #13203a; background:#0b1220;">
+  Built for MSU GLG 114 midterm prep — randomized MCQs + timer + instant grading
+</footer>
+
+<script>
+/* ---------------- Question bank (60+ MCQs) ----------------
+   Chapters 2–5 aligned to your study outline. */
+const BANK = [
+  // ---------- Chapter 2 — Rocks & Minerals ----------
+  {chapter:2,q:"Which is the best definition of a mineral?",choices:[
+    "Naturally occurring, organic solid with variable composition",
+    "Naturally occurring, inorganic, crystalline solid with definite composition",
+    "Man-made, crystalline solid with definite composition",
+    "Any substance with metallic luster"
+  ],answer:1,explain:"Minerals are naturally occurring, inorganic, crystalline solids with a specific chemical composition."},
+  {chapter:2,q:"The most abundant mineral group in Earth’s crust is:",choices:["Carbonates","Oxides","Silicates","Sulfates"],answer:2,explain:"Silicate minerals dominate the crust; built from the SiO₄ tetrahedron."},
+  {chapter:2,q:"Quartz is identified by which properties?",choices:["Hardness 3, reacts with HCl","Hardness 7, no cleavage","Metallic luster, magnetic","Cubic cleavage, salty taste"],answer:1,explain:"Quartz has hardness ≈7 and conchoidal fracture (no cleavage)."},
+  {chapter:2,q:"Calcite can be distinguished from quartz because calcite:",choices:["Is harder (H=7)","Has two perfect cleavages","Reacts with dilute HCl acid","Is magnetic"],answer:2,explain:"Calcite effervesces in dilute HCl and is softer (H≈3)."},
+  {chapter:2,q:"Feldspars commonly weather to form:",choices:["Olivine","Clay minerals","Halite","Graphite"],answer:1,explain:"Chemical weathering of feldspars typically yields clay minerals."},
+  {chapter:2,q:"Which list correctly matches texture with cooling?",choices:[
+    "Aphanitic—intrusive; Phaneritic—extrusive",
+    "Phaneritic—slow cooling; Aphanitic—fast cooling",
+    "Aphanitic—slow cooling; Glassy—slow cooling",
+    "Porphyritic—only extrusive"
+  ],answer:1,explain:"Phaneritic = slow/intrusive; Aphanitic = fast/extrusive."},
+  {chapter:2,q:"Which rock pair is felsic vs mafic?",choices:["Basalt—granite","Granite—gabbro","Rhyolite—peridotite","Gabbro—granite"],answer:1,explain:"Granite (felsic) vs gabbro (mafic)."},
+  {chapter:2,q:"Which process is NOT part of lithification?",choices:["Compaction","Cementation","Crystallization from magma","Precipitation of cements"],answer:2,explain:"Crystallization from magma forms igneous rocks, not sedimentary lithification."},
+  {chapter:2,q:"Weathering vs erosion:",choices:[
+    "Both are transport processes",
+    "Weathering = breakdown in place; erosion = transport",
+    "Erosion = chemical; weathering = mechanical",
+    "Weathering only occurs underwater"
+  ],answer:1,explain:"Weathering breaks down materials in place; erosion moves them."},
+  {chapter:2,q:"Limestone and marble are composed primarily of:",choices:["Quartz","Calcite","Halite","Dolomite"],answer:1,explain:"Both commonly consist of calcite (CaCO₃)."},
+  {chapter:2,q:"Chert and quartzite are composed primarily of:",choices:["Calcite","Gypsum","Quartz (SiO₂)","Feldspar"],answer:2,explain:"Chert is microcrystalline quartz; quartzite is metamorphosed sandstone."},
+  {chapter:2,q:"Ferromagnesian silicates are typically:",choices:[
+    "Light colored, low density","Fe–Mg rich, dark and denser","Highly reactive with HCl","Always metallic"
+  ],answer:1,explain:"Examples: olivine, pyroxene, amphibole — darker, denser."},
+  {chapter:2,q:"Which rock forms by lithification of sediments?",choices:["Granite","Basalt","Sandstone","Gabbro"],answer:2,explain:"Sandstone is clastic sedimentary."},
+  {chapter:2,q:"A porphyritic texture indicates:",choices:["Two-stage cooling","Metamorphism","Chemical precipitation","Rapid gas escape"],answer:0,explain:"Large phenocrysts in fine matrix → two-stage cooling."},
+  {chapter:2,q:"Which bonding type involves electron sharing?",choices:["Ionic","Covalent","Metallic","Hydrogen"],answer:1,explain:"Covalent bonds share electrons."},
+  {chapter:2,q:"Aphanitic texture implies:",choices:["Slow cooling at depth","Rapid cooling at/near surface","Prolonged metamorphism","Chemical precipitation"],answer:1,explain:"Fine grains = fast extrusive cooling."},
+  {chapter:2,q:"Which is a biochemical sedimentary rock?",choices:["Conglomerate","Coal","Granite","Gabbro"],answer:1,explain:"Coal forms from plant material; biochemical."},
+  {chapter:2,q:"Which texture indicates rapid degassing of lava?",choices:["Vesicular","Phaneritic","Gneissic","Foliated"],answer:0,explain:"Vesicles are frozen gas bubbles."},
+  {chapter:2,q:"Metamorphism without foliation is most likely from:",choices:[
+    "Regional compression","Contact heating by magma","Shear along faults","Burial with differential stress"
+  ],answer:1,explain:"Contact metamorphism → non-foliated (e.g., marble, quartzite)."},
+  {chapter:2,q:"Cleavage in minerals results from:",choices:["Random fracture","Planes of weak bonding","Impurities","Weathering"],answer:1,explain:"Cleavage follows planes of weaker atomic bonding."},
+  {chapter:2,q:"Which is a chemical sedimentary rock?",choices:["Breccia","Shale","Gypsum","Granite"],answer:2,explain:"Gypsum commonly forms by evaporation (chemical)."},
+  {chapter:2,q:"What mineral occurs in both limestone and marble?",choices:["Quartz","Calcite","Halite","Feldspar"],answer:1,explain:"Marble is metamorphosed limestone; both are calcite."},
+  {chapter:2,q:"What mineral dominates chert and quartzite?",choices:["Calcite","Quartz","Feldspar","Mica"],answer:1,explain:"Both are silica-rich (quartz)."},
+  // ---------- Chapter 3 — Plate Tectonics ----------
+  {chapter:3,q:"Wegener’s evidence for continental drift did NOT include:",choices:[
+    "Jigsaw fit of continents","Fossil matches","Magnetic stripes on seafloor","Glacial striations on now-tropical continents"
+  ],answer:2,explain:"Magnetic stripes were discovered later with seafloor spreading."},
+  {chapter:3,q:"Pangaea is:",choices:["An ancient ocean","The supercontinent (~200 Ma)","A volcanic arc","A mid-ocean ridge"],answer:1,explain:"Began breaking up in the Mesozoic."},
+  {chapter:3,q:"Seismic evidence for layering includes:",choices:[
+    "S-waves through outer core","Refraction/reflection & shadow zones","Uniform wave speeds","No shadow zones"
+  ],answer:1,explain:"Wave behavior reveals internal structure."},
+  {chapter:3,q:"Which boundary: basaltic volcanism + shallow quakes?",choices:["Convergent","Divergent","Transform","None"],answer:1,explain:"Mid-ocean ridges / rifts."},
+  {chapter:3,q:"Subduction zones are associated with:",choices:[
+    "Trenches & island arcs","Rift valleys & basalt flows","Transform faults only","None of these"
+  ],answer:0,explain:"Down-going slab generates trenches and arcs."},
+  {chapter:3,q:"Average plate motion rates:",choices:["Meters/day","Centimeters/year","Kilometers/century","Meters/year"],answer:1,explain:"Typical 2–10 cm/yr."},
+  {chapter:3,q:"Magnetic stripes on the seafloor show:",choices:[
+    "Yearly reversals","Symmetric spreading from ridges","Continents fixed in place","Only transform motion"
+  ],answer:1,explain:"Symmetry indicates new crust forming and moving away."},
+  {chapter:3,q:"Classic transform boundary example:",choices:["San Andreas Fault","Mid-Atlantic Ridge","Peru–Chile Trench","Himalayas"],answer:0,explain:"Strike-slip transform fault."},
+  {chapter:3,q:"Hot spot volcanism (e.g., Hawaii) indicates:",choices:[
+    "Volcanism fixed vs plate motion","Occurs only at ridges","Field reversals","Continental collision"
+  ],answer:0,explain:"Plume is relatively fixed; plate moves over it."},
+  {chapter:3,q:"The Moho separates:",choices:["Crust from mantle","Mantle from core","Inner from outer core","Oceanic from continental crust"],answer:0,explain:"Mohorovičić discontinuity."},
+  {chapter:3,q:"Which observation supports modern plate motion?",choices:[
+    "Tree rings","GPS velocities","Star positions","Ice-core CO₂"
+  ],answer:1,explain:"GPS measures cm/yr movements directly."},
+  {chapter:3,q:"Island arcs form at:",choices:[
+    "Ocean–ocean convergence","Ocean–continent divergence","Continent–continent collision","Transforms"
+  ],answer:0,explain:"One oceanic plate subducts beneath another."},
+  {chapter:3,q:"At continental–continental collision zones you expect:",choices:[
+    "Volcanic arcs over subduction","High mountain belts & thick crust","Deep trenches","Basaltic flood plains at ridges"
+  ],answer:1,explain:"Example: Himalayas."},
+  {chapter:3,q:"Which is NOT typical of divergent boundaries?",choices:[
+    "Rift valleys","Normal faulting","Basaltic volcanism","Deep-focus earthquakes"
+  ],answer:3,explain:"Deep quakes occur mainly in subduction zones."},
+  {chapter:3,q:"A rift is best associated with:",choices:[
+    "Convergent compression","Divergent extension","Transform shear","Static lithosphere"
+  ],answer:1,explain:"Crust thins and extends at rifts."},
+  // ---------- Chapter 4 — Earthquakes ----------
+  {chapter:4,q:"Elastic rebound theory explains:",choices:[
+    "Volcanic eruptions","Earthquake slip on faults","Mineral growth","Metamorphism"
+  ],answer:1,explain:"Strain accumulates → sudden rupture → seismic waves."},
+  {chapter:4,q:"Which statement about seismic waves is correct?",choices:[
+    "P-waves are slower than S-waves","S-waves travel through liquids","P-waves are compressional and fastest","Surface waves travel through the core"
+  ],answer:2,explain:"S-waves do not pass through liquids; P-waves are fastest."},
+  {chapter:4,q:"Earthquake intensity is measured by:",choices:[
+    "Richter","Moment magnitude (Mw)","Modified Mercalli","Seismic gap index"
+  ],answer:2,explain:"Mercalli = observed effects; magnitudes measure energy."},
+  {chapter:4,q:"Preferred magnitude scale for large quakes:",choices:["Richter","Moment Magnitude (Mw)","Mercalli","Local magnitude only"],answer:1,explain:"Mw scales well for big events."},
+  {chapter:4,q:"Liquefaction occurs when:",choices:[
+    "Solid bedrock shakes","Water-saturated sediments lose strength","Magma intrudes faults","Air fills pores"
+  ],answer:1,explain:"Saturated, unconsolidated sediments can behave like a fluid."},
+  {chapter:4,q:"Deep-focus earthquakes occur mainly at:",choices:[
+    "Divergent boundaries","Transform faults","Subduction zones","Hot spots"
+  ],answer:2,explain:"Cold subducting slabs permit brittle failure deep."},
+  {chapter:4,q:"Why more quakes in Alaska than Texas?",choices:[
+    "Population","Climate","Plate boundary vs intraplate","Soil"
+  ],answer:2,explain:"Alaska = subduction boundary; Texas = intraplate."},
+  {chapter:4,q:"Which building type performs better in quakes?",choices:[
+    "Unreinforced brick","Rigid concrete without rebar","Wood-frame","Stone masonry"
+  ],answer:2,explain:"Wood frames are lighter and more flexible."},
+  {chapter:4,q:"Good preparedness step:",choices:[
+    "Disable gas shutoff after quakes","Secure heavy furniture; have kits","Hide under glass tables","Use elevators"
+  ],answer:1,explain:"Secure items, plan, supplies."},
+  {chapter:4,q:"A seismic gap indicates:",choices:[
+    "Area with no faults","Locked segment likely to rupture","Region without stations","End of hazard"
+  ],answer:1,explain:"A gap can indicate strain accumulation."},
+  {chapter:4,q:"Focus (hypocenter) is:",choices:[
+    "Point on surface above rupture","Subsurface point where rupture starts","Strongest shaking area","Plate boundary intersection"
+  ],answer:1,explain:"Epicenter is directly above it on the surface."},
+  {chapter:4,q:"Moment magnitude depends mainly on:",choices:[
+    "Felt intensity","Fault area × slip × rigidity","Duration of shaking only","Aftershock count"
+  ],answer:1,explain:"Physical fault parameters determine Mw."},
+  {chapter:4,q:"Surface waves generally:",choices:[
+    "Cause little damage","Travel faster than P-waves","Cause most near-surface damage","Only occur in oceans"
+  ],answer:2,explain:"Love/Rayleigh waves can be highly destructive."},
+  {chapter:4,q:"Recommended action during a quake:",choices:[
+    "Run outside","Stand in a doorway","Drop, Cover, and Hold On","Use elevators"
+  ],answer:2,explain:"Modern guidance favors D–C–H."},
+  // ---------- Chapter 5 — Volcanoes ----------
+  {chapter:5,q:"Mafic magma is characterized by:",choices:[
+    "High viscosity, explosive","Low viscosity, gentle","High silica, sticky","High gas retention"
+  ],answer:1,explain:"Basaltic magma is fluid; effusive eruptions."},
+  {chapter:5,q:"Shield volcanoes are typically found at:",choices:[
+    "Convergent boundaries","Transform margins","Hot spots & divergent settings","Continental collision zones"
+  ],answer:2,explain:"Hawaii (hot spot), Iceland (ridge)."},
+  {chapter:5,q:"Composite volcanoes (stratovolcanoes) are associated with:",choices:[
+    "Oceanic hot spots","Subduction zones","Transform boundaries","Intraplate rifts only"
+  ],answer:1,explain:"Andes/Cascades — explosive andesitic volcanism."},
+  {chapter:5,q:"Most deadly hazard in explosive eruptions:",choices:[
+    "Lava flows","Pyroclastic flows","Geothermal steam","Tsunamis"
+  ],answer:1,explain:"Pyroclastic density currents are fast and extremely hot."},
+  {chapter:5,q:"A lahar is:",choices:[
+    "Gas plume","Volcanic earthquake","Mudflow of water + ash/debris","Basaltic lava type"
+  ],answer:2,explain:"Volcanic debris flow; can occur long after eruptions."},
+  {chapter:5,q:"Correct pairing:",choices:[
+    "Shield—rhyolitic","Composite—basaltic","Cinder cone—felsic domes","Composite—andesitic/felsic"
+  ],answer:3,explain:"Composite cones erupt andesitic to rhyolitic magmas."},
+  {chapter:5,q:"Hot spots produce volcanic chains because:",choices:[
+    "Hot spots move rapidly","Plates move over a relatively fixed plume","Magnetic reversals move volcanoes","Subduction flips direction"
+  ],answer:1,explain:"Age progression records plate motion over a stationary plume."},
+  {chapter:5,q:"Mid-ocean ridges erupt mainly:",choices:["Rhyolite","Basalt","Andesite","Peridotite"],answer:1,explain:"Decompression melting of mantle → basalt."},
+  {chapter:5,q:"High viscosity magma tends to:",choices:[
+    "Flow easily; gentle","Trap gases; explosive","Form only underwater","Produce only cinder cones"
+  ],answer:1,explain:"Silica-rich viscous magma traps gas → explosive."},
+  {chapter:5,q:"A caldera forms when:",choices:[
+    "Lava hits the sea","Cone erodes away","Roof collapses into an evacuated magma chamber","Two plates collide"
+  ],answer:2,explain:"Large explosive eruptions can evacuate chamber → collapse."},
+  {chapter:5,q:"Pahoehoe vs ‘a‘ā describes:",choices:["Types of ash","Magma chemistry","Basaltic lava flow textures","Crater shapes"],answer:2,explain:"Pahoehoe = ropy; ‘a‘ā = rough, clinker."},
+  {chapter:5,q:"Benefits of volcanic eruptions include:",choices:[
+    "None","Fertile soils, new land, geothermal energy","Global cooling only","Storm reduction"
+  ],answer:1,explain:"Volcanism creates fertile soils, adds land, provides energy resources."},
+  {chapter:5,q:"Precursors used to forecast eruptions include:",choices:[
+    "Decrease in ground temperature","Reduced small quakes","Inflation/swelling & increased gas emissions","Sudden silence forever"
+  ],answer:2,explain:"Deformation + gas + seismicity often increase before eruptions."},
+  // ---------- Mixed extras to reach 60+ ----------
+  {chapter:2,q:"Ion vs isotope:",choices:[
+    "Ion = diff. neutrons; isotope = net charge","Ion = net charge from e− gain/loss; isotope = diff. neutrons","Both are the same","Ion = diff. protons"
+  ],answer:1,explain:"Ions vary electrons (charge); isotopes vary neutrons (mass)."},
+  {chapter:2,q:"Clastic sedimentary rocks are classified primarily by:",choices:["Color","Fossil content","Grain size","Chemical formula"],answer:2,explain:"Shale/siltstone/sandstone/conglomerate by grain size."},
+  {chapter:2,q:"Intrusive (plutonic) rocks have:",choices:["Fine grains","Coarse grains (phaneritic)","Glassy texture only","Only mafic minerals"],answer:1,explain:"Slow cooling at depth grows larger crystals."},
+  {chapter:3,q:"Reverse vs normal faulting reflects:",choices:[
+    "Extension vs compression","Compression vs extension","Shear vs compression","Random stress"
+  ],answer:1,explain:"Reverse/thrust = compression; normal = extension."},
+  {chapter:3,q:"Ridge push & slab pull are:",choices:["Volcanic hazards","Plate-driving forces","Weathering processes","Seismic waves"],answer:1,explain:"Forces that help drive plate motions."},
+  {chapter:4,q:"Recurrence interval means:",choices:[
+    "Exact time of next quake","Average time between events on a fault","Building code cycle","Aftershock duration"
+  ],answer:1,explain:"Statistical average between significant events."},
+  {chapter:4,q:"Why do wood frames outperform unreinforced masonry?",choices:[
+    "Heavier mass","Greater flexibility & lower mass","They’re waterproof","They have no nails"
+  ],answer:1,explain:"Flexibility + low mass reduces inertial forces."},
+  {chapter:5,q:"Which setting most likely produces rhyolite?",choices:[
+    "Mid-ocean ridge","Hot spot under continent","Ocean–ocean subduction only","Transform boundary"
+  ],answer:1,explain:"Continental hot spots / crustal melting → silicic magmas."}
+];
+
+/* ---------------- Utilities ---------------- */
+function shuffle(arr){ for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]];} return arr; }
+const $ = s => document.querySelector(s);
+function el(tag, attrs={}, ...kids){ const e=document.createElement(tag); for(const[k,v] of Object.entries(attrs)) (k==="class")? e.className=v : e.setAttribute(k,v); kids.forEach(k=>e.append(k)); return e; }
+
+/* ---------------- State ---------------- */
+let test = [];
+let answers = {}; // idx -> choice
+let submitted = false;
+let timerId = null;
+let remainingSec = 0;
+
+/* ---------------- Build & Render ---------------- */
+function buildTest(){
+  submitted = false; answers = {};
+  const chapter = $("#chapterSelect").value;
+  const n = parseInt($("#numQuestions").value,10);
+  let pool = BANK.slice();
+  if(chapter!=="all"){ pool = pool.filter(q=>q.chapter === parseInt(chapter,10)); }
+  shuffle(pool);
+  test = pool.slice(0, Math.min(n, pool.length));
+  $("#questions").innerHTML = "";
+  $("#result").textContent = "";
+  $("#reviewPanel").classList.add("hidden");
+  $("#progressWrap").classList.remove("hidden");
+  $("#navControls").classList.remove("hidden");
+  $("#status").textContent = `In progress • ${test.length} questions`;
+  $("#progress").value = 0;
+  renderQuestions();
+  const mins = parseInt($("#timerSelect").value,10);
+  startTimer(mins);
+}
+
+function renderQuestions(){
+  const container = $("#questions");
+  container.innerHTML = "";
+  test.forEach((q, idx)=>{
+    const card = el("div",{class:"question-card", id:`q_${idx}`});
+    const title = el("div",{class:"qtext"}, `${idx+1}. ${q.q}`);
+    const choicesWrap = el("div",{class:"choices"});
+    q.choices.forEach((c, i)=>{
+      const id = `q${idx}_c${i}`;
+      const radio = el("input",{type:"radio", name:`q_${idx}`, id, value:i});
+      radio.addEventListener("change", ()=>{ answers[idx] = i; updateProgress(); });
+      const label = el("label",{for:id});
+      label.textContent = c;
+      const choice = el("div",{class:"choice"}, radio, label);
+      // make whole row clickable
+      choice.addEventListener("click", (e)=>{
+        if(e.target.tagName.toLowerCase()!=="input"){
+          radio.checked = true;
+          answers[idx] = i;
+          updateProgress();
+        }
+      });
+      choicesWrap.append(choice);
+    });
+    const explain = el("div",{class:"explain"}, `Explanation: ${q.explain}`);
+    card.append(title, choicesWrap, explain);
+    container.append(card);
+  });
+}
+
+function updateProgress(){
+  const answered = Object.keys(answers).length;
+  const total = test.length;
+  $("#progress").value = Math.round(100 * answered / total);
+}
+
+/* ---------------- Submit / Grade ---------------- */
+function submit(){
+  if(submitted) return;
+  submitted = true;
+  clearInterval(timerId);
+  let correct = 0;
+  const missed = [];
+  test.forEach((q, idx)=>{
+    const chosen = answers[idx];
+    const card = document.getElementById(`q_${idx}`);
+    const explain = card.querySelector(".explain");
+    const choices = card.querySelectorAll(".choice");
+    choices.forEach((node,i)=>{
+      node.classList.remove("correct","incorrect");
+      if(i===q.answer) node.classList.add("correct");
+      if(chosen!=null && i===chosen && chosen!==q.answer) node.classList.add("incorrect");
+    });
+    explain.style.display = "block";
+    if(chosen === q.answer){ correct++; } else { missed.push({idx, q}); }
+  });
+  const scorePct = Math.round(100*correct/test.length);
+  $("#result").textContent = `Score: ${correct}/${test.length} (${scorePct}%)`;
+  $("#status").textContent = `Completed • ${correct}/${test.length}`;
+  buildMissed(missed);
+}
+
+function buildMissed(missed){
+  const wrap = $("#missed");
+  wrap.innerHTML = "";
+  if(!missed.length){ wrap.textContent = "No misses — nice work!"; }
+  else{
+    missed.forEach(({idx,q})=>{
+      const you = answers[idx];
+      const block = el("div",{class:"question-card"});
+      const title = el("div",{class:"qtext"}, `${idx+1}. ${q.q}`);
+      const your = el("div",{}, `Your answer: ${you!=null ? q.choices[you] : "(no answer)"}`);
+      const correct = el("div",{}, `Correct: ${q.choices[q.answer]}`);
+      const exp = el("div",{class:"explain", style:"display:block;margin-top:8px"}, `Explanation: ${q.explain}`);
+      block.append(title,your,correct,exp);
+      wrap.append(block);
+    });
+  }
+  $("#reviewPanel").classList.remove("hidden");
+}
+
+function showCorrect(){
+  test.forEach((q, idx)=>{
+    const card = document.getElementById(`q_${idx}`);
+    const choices = card.querySelectorAll(".choice");
+    choices.forEach((node,i)=>{ node.classList.toggle("correct", i===q.answer); });
+    const explain = card.querySelector(".explain");
+    explain.style.display = "block";
+  });
+}
+
+/* ---------------- Timer ---------------- */
+function startTimer(minutes){
+  clearInterval(timerId);
+  if(minutes<=0){ $("#timerBadge").classList.add("hidden"); return; }
+  $("#timerBadge").classList.remove("hidden");
+  remainingSec = minutes*60;
+  updateTimerBadge();
+  timerId = setInterval(()=>{
+    remainingSec--;
+    updateTimerBadge();
+    if(remainingSec<=0){
+      clearInterval(timerId);
+      alert("Time is up! Submitting your test.");
+      submit();
+    }
+  },1000);
+}
+function updateTimerBadge(){
+  const m = Math.floor(remainingSec/60);
+  const s = remainingSec%60;
+  $("#timerBadge").textContent = `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+}
+
+/* ---------------- Export Results ---------------- */
+function exportResults(){
+  const payload = {
+    ts: new Date().toISOString(),
+    settings: {
+      chapter: $("#chapterSelect").value,
+      numQuestions: parseInt($("#numQuestions").value,10),
+      timer: $("#timerSelect").value
+    },
+    test: test.map((q,i)=>({i,chapter:q.chapter,q:q.q,choices:q.choices,answer:q.answer,chosen:answers[i] ?? null}))
+  };
+  const blob = new Blob([JSON.stringify(payload,null,2)], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a"); a.href = url; a.download = "GLG114_practice_results.json"; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url), 500);
+}
+
+/* ---------------- Events ---------------- */
+document.getElementById("startBtn").addEventListener("click", buildTest);
+document.getElementById("submitBtn").addEventListener("click", submit);
+document.getElementById("showAllBtn").addEventListener("click", showCorrect);
+document.getElementById("reviewBtn").addEventListener("click", ()=>{
+  if(!submitted){ submit(); }
+  const panel = document.getElementById("reviewPanel");
+  panel.classList.remove("hidden");
+  panel.open = true;
+});
+document.getElementById("resetBtn").addEventListener("click", ()=>{
+  clearInterval(timerId);
+  document.getElementById("questions").innerHTML = "";
+  document.getElementById("result").textContent = "";
+  document.getElementById("reviewPanel").classList.add("hidden");
+  document.getElementById("progressWrap").classList.add("hidden");
+  document.getElementById("navControls").classList.add("hidden");
+  document.getElementById("status").textContent = "Not started";
+  document.getElementById("timerBadge").classList.add("hidden");
+  answers = {}; submitted=false;
+});
+document.getElementById("exportBtn").addEventListener("click", exportResults);
+
+/* Init */
+document.addEventListener("DOMContentLoaded", ()=>{
+  document.getElementById("status").textContent = "Not started";
+});
+</script>
+</body>
+</html>
